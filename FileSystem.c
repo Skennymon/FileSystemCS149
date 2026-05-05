@@ -46,11 +46,16 @@ Directory *create_directory(const char *name, Directory *parent) {
         fprintf(stderr, "Failed to allocate directory\n");
         exit(1);
     }
+
     memset(dir, 0, sizeof(Directory));
-    strcpy(dir->name, name);
+
+    strncpy(dir->name, name, MAX_NAME_LENGTH - 1);
+    dir->name[MAX_NAME_LENGTH - 1] = '\0';
+
     dir->parent = parent;
     dir->num_files = 0;
     dir->num_dirs = 0;
+
     return dir;
 }
 
@@ -60,9 +65,15 @@ File *create_file(const char *name, Directory *parent) {
         fprintf(stderr, "Failed to allocate file\n");
         exit(1);
     }
-    strcpy(file->name, name);
+
+    memset(file, 0, sizeof(File));
+
+    strncpy(file->name, name, MAX_NAME_LENGTH - 1);
+    file->name[MAX_NAME_LENGTH - 1] = '\0';
+
     file->parent = parent;
     file->content[0] = '\0';
+
     return file;
 }
 
@@ -116,6 +127,12 @@ void remove_file(char *name) {
     for (int i = 0; i < current->num_files; i++) {
         if (strcmp(current->files[i]->name, name) == 0) {
             free(current->files[i]);
+
+            for (int j = i; j < current->num_files - 1; j++) {
+                current->files[j] = current->files[j + 1];
+            }
+
+            current->files[current->num_files - 1] = NULL;
             current->num_files--;
             return;
         }
@@ -127,6 +144,12 @@ void remove_directory(char *name) {
     for (int i = 0; i < current->num_dirs; i++) {
         if (strcmp(current->dirs[i]->name, name) == 0) {
             free(current->dirs[i]);
+
+            for (int j = i; j < current->num_dirs - 1; j++) {
+                current->dirs[j] = current->dirs[j + 1];
+            }
+
+            current->dirs[current->num_dirs - 1] = NULL;
             current->num_dirs--;
             return;
         }
@@ -152,14 +175,14 @@ void cd(const char *name) {
 }
 
 void cat(const char *name) {
-    for (int i = 0; i < MAX_ITEMS; i++) {
+    for (int i = 0; i < current->num_files; i++) {
         if (strcmp(current->files[i]->name, name) == 0) {
-            printf(current->files[i]->content);
+            printf("%s", current->files[i]->content);
             printf("\n");
             return;
         }
     }
-    printf("That file doesn't exist!");
+    printf("That file doesn't exist!\n");
 }
 
 int main(void) {
