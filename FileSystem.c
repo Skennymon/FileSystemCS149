@@ -14,6 +14,7 @@ struct File {
     char name[MAX_NAME_LENGTH];
     char content[MAX_CONTENT_LENGTH];
     Directory *parent;
+    int is_open;
 };
 
 struct Directory {
@@ -73,7 +74,7 @@ File *create_file(const char *name, Directory *parent) {
 
     file->parent = parent;
     file->content[0] = '\0';
-
+    file->is_open = 0;
     return file;
 }
 
@@ -185,6 +186,47 @@ void cat(const char *name) {
     printf("That file doesn't exist!\n");
 }
 
+void open_file(char *name) {
+    for (int i = 0; i < current->num_files; i++) {
+        if (strcmp(current->files[i]->name, name) == 0) {
+            current->files[i]->is_open = 1;
+            printf("File %s is now open.\n", name);
+            return;
+        }
+    }
+    printf("File %s not found\n", name);
+}
+
+void close_file(char *name) {
+    for (int i = 0; i < current->num_files; i++) {
+        if (strcmp(current->files[i]->name, name) == 0) {
+            current->files[i]->is_open = 0;
+            printf("File %s is now closed.\n", name);
+            return;
+        }
+    }
+    printf("File %s not found\n", name);
+}
+
+void search_file_recursive(Directory *dir, const char *name) {
+    for (int i = 0; i < dir->num_files; i++) {
+        if (strcmp(dir->files[i]->name, name) == 0) {
+            printf("Found file: ");
+            pwd_recursive(dir);
+            printf("/%s\n", dir->files[i]->name);
+        }
+    }
+
+    for (int i = 0; i < dir->num_dirs; i++) {
+        search_file_recursive(dir->dirs[i], name);
+    }
+}
+
+void search_file(const char *name) {
+    search_file_recursive(root, name);
+}
+
+
 int main(void) {
     root = create_directory("root", NULL);
     current = root;
@@ -227,6 +269,18 @@ int main(void) {
         }
         else if (strcmp(cmd, "edit") == 0 && arg) {
             edit(arg);
+            continue;
+        }
+           else if (strcmp(cmd, "open") == 0 && arg) {
+            open_file(arg);
+            continue;
+        }
+        else if (strcmp(cmd, "close") == 0 && arg) {
+            close_file(arg);
+            continue;
+        }
+        else if (strcmp(cmd, "search") == 0 && arg) {
+            search_file(arg);
             continue;
         }
         else if (strcmp(cmd, "rm") == 0 && arg) {
