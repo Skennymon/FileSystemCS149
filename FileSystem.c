@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #define MAX_NAME_LENGTH 100
 #define MAX_CONTENT_LENGTH 1000
@@ -15,6 +16,7 @@ struct File {
     char content[MAX_CONTENT_LENGTH];
     Directory *parent;
     int is_open;
+    time_t created_at;
 };
 
 struct Directory {
@@ -75,6 +77,7 @@ File *create_file(const char *name, Directory *parent) {
     file->parent = parent;
     file->content[0] = '\0';
     file->is_open = 0;
+    file->created_at = time(NULL);
     return file;
 }
 
@@ -226,6 +229,67 @@ void search_file(const char *name) {
     search_file_recursive(root, name);
 }
 
+void rename_item(char *oldname, char *newname) {
+    // Check files in current directory
+    for (int i = 0; i < current->num_files; i++) {
+        if (strcmp(current->files[i]->name, oldname) == 0) {
+            strncpy(current->files[i]->name, newname, MAX_NAME_LENGTH - 1);
+            current->files[i]->name[MAX_NAME_LENGTH - 1] = '\0';
+            printf("File renamed from %s to %s\n", oldname, newname);
+            return;
+        }
+    }
+
+    // Check directories in current directory
+    for (int i = 0; i < current->num_dirs; i++) {
+        if (strcmp(current->dirs[i]->name, oldname) == 0) {
+            strncpy(current->dirs[i]->name, newname, MAX_NAME_LENGTH - 1);
+            current->dirs[i]->name[MAX_NAME_LENGTH - 1] = '\0';
+            printf("Directory renamed from %s to %s\n", oldname, newname);
+            return;
+        }
+    }
+
+    printf("%s not found\n", oldname);
+}
+
+void info(char *name) {
+    for (int i = 0; i < current->num_files; i++) {
+        if (strcmp(current->files[i]->name, name) == 0) {
+            printf("File name: %s\n", current->files[i]->name);
+            printf("Status: %s\n", current->files[i]->is_open ? "Open" : "Closed");
+            printf("Content length: %lu characters\n", strlen(current->files[i]->content));
+            printf("Date created: %s", ctime(&current->files[i]->created_at));
+            return;
+        }
+    }
+
+    printf("File %s not found\n", name);
+}
+
+void help(void) {
+    printf("Available commands:\n");
+    printf("  pwd                         - show current directory\n");
+    printf("  ls                          - list files and directories\n");
+    printf("  mkdir <dirname>             - create a directory\n");
+    printf("  rmdir <dirname>             - remove a directory\n");
+    printf("  touch <filename>            - create a file\n");
+    printf("  create <filename>           - create a file\n");
+    printf("  edit <filename>             - edit file content\n");
+    printf("  cat <filename>              - show file content\n");
+    printf("  info <filename>             - show file information\n");
+    printf("  open <filename>             - open a file\n");
+    printf("  close <filename>            - close a file\n");
+    printf("  rm <filename>               - remove a file\n");
+    printf("  delete <filename>           - remove a file\n");
+    printf("  rename <oldname> <newname>  - rename a file or directory\n");
+    printf("  search <filename>           - search for a file from root\n");
+    printf("  cd <dirname>                - change directory\n");
+    printf("  cd ..                       - go to parent directory\n");
+    printf("  exit                        - exit simulator\n");
+
+}
+
 
 int main(void) {
     root = create_directory("root", NULL);
@@ -242,6 +306,7 @@ int main(void) {
         /* Split on whitespace so "mkdir bruh" -> cmd="mkdir", arg="bruh" */
         char *cmd = strtok(input, " \t\n");
         char *arg = strtok(NULL, " \t\n");
+	char *arg2 = strtok(NULL, " \t\n");
 
         if (!cmd) {
             continue;
@@ -255,6 +320,10 @@ int main(void) {
             ls();
             continue;
         }
+	else if (strcmp(cmd, "help") == 0) {
+   	    help();
+   	    continue;
+	}
         else if (strcmp(cmd, "mkdir") == 0 && arg) {
             mkdir(arg);
             continue;
@@ -267,6 +336,10 @@ int main(void) {
             touch(arg);
             continue;
         }
+	else if (strcmp(cmd, "create") == 0 && arg) {
+    	    touch(arg);
+   	    continue;
+	}
         else if (strcmp(cmd, "edit") == 0 && arg) {
             edit(arg);
             continue;
@@ -283,10 +356,18 @@ int main(void) {
             search_file(arg);
             continue;
         }
+	else if (strcmp(cmd, "rename") == 0 && arg && arg2) {
+    		rename_item(arg, arg2);
+   		continue;
+	}
         else if (strcmp(cmd, "rm") == 0 && arg) {
             remove_file(arg);
             continue;
         }
+	else if (strcmp(cmd, "delete") == 0 && arg) {
+	    remove_file(arg);
+	    continue;
+	}
         else if (strcmp(cmd, "cd") == 0 && arg) {
             cd(arg);
             continue;
@@ -298,6 +379,10 @@ int main(void) {
             cat(arg);
             continue;
         }
+	else if (strcmp(cmd, "info") == 0 && arg) {
+   	    info(arg);
+   	    continue;
+	}
         else {
             printf("Unknown Command! Try `help` if you want the list of commands!");
         }
